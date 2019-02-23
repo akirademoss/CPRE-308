@@ -2,7 +2,7 @@
 int main() {
 int ret;
 ret = fork();
-if (/* TODO add code here to make the output correct */) {
+if (ret == 0) {
 /* this is the child process */
 printf("The child process ID is %d\n", getpid());
 printf("The child’s parent process ID is %d\n", getppid());

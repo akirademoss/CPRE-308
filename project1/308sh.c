@@ -1,4 +1,5 @@
 #include "include.h"
+#define MAXLINE  50
 
 int main(int argc, char *argv[]){
 	char* cmdPrompt;
@@ -16,38 +17,64 @@ int main(int argc, char *argv[]){
 
 
 	char line[50];
+	char* linepass;
 	char* cmd;
-	char* args[4];
-	char pos*;
+	char *p;
 
-	fgets(line, 50, stdin);
-	if((pos=strchr(line, '\n)) != NULL){
-		*pos = '\0';
+	char* cmd1;
+	char** args;
+
+	//allocate space for cmd
+	cmd = malloc((MAXLINE + 1) * sizeof(char));
+
+	//get the input from user
+	fgets(line, MAXLINE, stdin);
+	//if new line exists, replace with null terminator
+    if(p=strchr(line, '\n')){
+    	*p = '\0';
 	}
+	
+	/* working code
+	cmd = malloc((MAXLINE + 1) * sizeof(char));
+	linepass = strtok(line, " ");
+	strcpy(cmd, linepass);
+	printf("%s ", &cmd[0]);
+	*/
 
-	cmd = strtok(line, " ");
+	//get the string from the input
+	linepass = strtok(line, " ");
+	//copy to our allocated space
+	strcpy(cmd, linepass);
+
+
+	//printf("%s ", &cmd[0]);
+
+
+	//free(cmd);
 	int i=0;
-	while(cmd != NULL){
-		args[i] = strtok(NULL, " ");
+	int len;
+
+	len = strlen(linepass);
+	printf("%d", len);
+
+	while(linepass != NULL || (i < 4)){
+		linepass = strtok(NULL, " ");
+		//*args = (char *) malloc((strlen(cmd) + 1) * sizeof(char));
+		//initialize 
+		//(*args)[0] = cmd;
+		//strcpy((*args)[0], cmd);
 		i++;
+		if(linepass != NULL){
+			printf(" %s\n", linepass);
+		}
+		//free(cmd);
 	}
 
 	if (strcmp(cmd, "exit") == 0){
 		exit(0);
 	}
-	if (strcmp(cmd, "exit") == 0){
-		exit(0);
-	}
-	if (strcmp(cmd, "exit") == 0){
-		exit(0);
-	}
-	if (strcmp(cmd, "exit") == 0){
-		exit(0);
-	}
-	if (strcmp(cmd, "exit") == 0){
-		exit(0);
-	}
 
+	
 
 
 
