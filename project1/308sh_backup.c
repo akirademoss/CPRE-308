@@ -2,11 +2,6 @@
 #define MAXLINE  50
 
 
-char* readLine(){
-	
-}
-char ** getArgs()
-
 
 int main(int argc, char *argv[]){
 	char* cmdPrompt;
