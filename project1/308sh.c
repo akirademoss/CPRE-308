@@ -12,9 +12,7 @@ char** parse(void){
 	char* linepass;
 	char* p;
 
-	//get the input from user
-	//then replace '\n' with '\0'
-	//next tokenize input
+	//gets the input from user, replace '\n' with '\0', then tokenize input
 	fgets(line, MAXLINE, stdin);
     if(p=strchr(line, '\n')){
     	*p = '\0';
@@ -23,14 +21,13 @@ char** parse(void){
 	args[0] = linepass;
 
 
-	//get arguments preceeding inital command
+	//gets arguments preceeding inital command and stores them into an array
 	int i = 1;
 	while(linepass != NULL){
 		linepass = strtok(NULL, " ");
 		if(linepass != NULL){
 			args[i] = linepass;
-			//printf statement for testing only
-			//printf("%s\n", args[i]);
+			printf("%s\n", args[i]);
 		}
 		i++;
 	}
