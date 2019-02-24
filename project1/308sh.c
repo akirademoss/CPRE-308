@@ -1,6 +1,13 @@
 #include "include.h"
 #define MAXLINE  50
 
+
+//char* readLine(){
+
+//}
+//char ** getArgs()
+
+
 int main(int argc, char *argv[]){
 	char* cmdPrompt;
 	if(argc > 1 && argv[1] == "-p") {
@@ -61,6 +68,10 @@ int main(int argc, char *argv[]){
 		exit(0);
 	}
 	
+	if (strcmp(cmd, "exit") == 0){
+		exit(0);
+	}
+
 	if (strcmp(cmd, "exit") == 0){
 		exit(0);
 	}
