@@ -1,12 +1,37 @@
+/**
+ * @author Akira DeMoss
+ * @date 2/24/19
+ */
+
 #include "include.h"
 #include <limits.h>
 #define MAXLINE  50
 
-//boolean type
+/**
+ * Boolean type definition
+ */
 typedef enum bool { false, true };
 
 /**
+ * Code to get the name of the shell
+ * @param argc - # of strings in command line arguments
+ * @param argv - string array of commandline arguments
+ */
+char* getShellName(int argc, char* argv[]){
+	char* shName;
+	if(argc > 1 && argv[1] == "-p") {
+		sleep(1);
+		shName = strcat(argv[2], "> "); 
+	}
+	else{
+		 shName = "308sh> ";
+	}
+	return shName;
+}
+
+/**
  * Code to parse user input into an array of strings
+ * @return args - string array of commandline arguments
  */
 char** parse(void){
 	//2d array - pointer to pointer - string array for cmdArgs
@@ -34,22 +59,9 @@ char** parse(void){
 }
 
 /**
- * Code to get the name of the shell
- */
-char* getShellName(int argc, char* argv[]){
-	char* shName;
-	if(argc > 1 && argv[1] == "-p") {
-		sleep(1);
-		shName = strcat(argv[2], "> "); 
-	}
-	else{
-		 shName = "308sh> ";
-	}
-	return shName;
-}
-
-/**
  * Builtin Command functionalities
+ * @param args - string array of commandline arguments
+ * @return true if the command is a built in command, false if the command is not
  */
 enum bool builtIn(char** args){
 	char cwd[PATH_MAX];
@@ -69,21 +81,45 @@ enum bool builtIn(char** args){
 	return true;
 }
 
+/**
+ * Executable commands
+ * @param args - string array of commandline arguments
+ */
 void executable(char** args){
-	printf("begin executable: %s\n", args[0]);
-	int failed = 0;
+	int failed;
+	pid_t child;
+	long pid_exit;
+	int status;
 	char* command = malloc((MAXLINE + 1) * sizeof(char));
+
+
 	strcpy(command, args[0]);
-	failed = execvp(command, args);
-	if(failed <0){
-		printf("Cannot exec command '%s': No such file or path variable exists\n", command);
+	child = fork();
+	if (child < 1) {
+		printf("[%ld]  %s\n", ((long) getpid()), command);
+		failed = execvp(command, args);
+		if(failed == -1){
+			printf("Cannot exec command '%s': No such file or path variable exists\n", command);
+			kill(getpid(), SIGTERM);
+			return;
+		}
+		return;
+	} else {
+		pid_exit = (long) child;
+		wait(&status);
+		if (WIFEXITED(status)) {
+			printf("[%ld]  %s Exit %d\n", pid_exit, command, WEXITSTATUS(status));
+		} else if (WIFSIGNALED(status)) {
+			printf("[%ld]  %s Exit %d\n",  ((long) getpid()), command, WTERMSIG(status));
+		}
 	}
+	
 }
-
-
 
 /**
  * Primary functional logic
+ * @param argc - # of strings in command line arguments
+ * @param argv - string array of commandline arguments
  */
 int main(int argc, char *argv[]){
 	char* shellName;
@@ -96,10 +132,9 @@ int main(int argc, char *argv[]){
 
 	printf("%s", shellName);
 	cmdArgs = parse();
-	if(builtIn(cmdArgs) < 1){
-		printf("main before executable: %s\n", cmdArgs[0]);
-		executable(cmdArgs);
+	if(builtIn(cmdArgs) == 0)
+		{executable(cmdArgs);}
 	}
 
-	}
+	return 0;
 }

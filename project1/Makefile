@@ -1,7 +1,7 @@
 CC = gcc
 BIN=./bin/
 
-all: 308sh
+all: 308sh 
 
 308sh: 308sh.o 
 	$(CC) 308sh.o -o 308sh
@@ -10,4 +10,4 @@ all: 308sh
 	$(CC) -c -g 308sh.c
 
 clean:
-	rm -f include.o 308sh.o 
+	rm -f include.o 308sh.o test.o
