@@ -6,22 +6,26 @@
 int test1;
 int test2;
 pthread_mutex_t lock;
+//cond vars waiting to be signaled
 pthread_cond_t can_cond;
 pthread_cond_t I_cond;
 
 
 void *printHello(void *args){
 	pthread_mutex_lock(&lock);
+	// Start of critical section 
 	flockfile(stdout);
 	fprintf(stdout, "Never going to give you up\n");
 	funlockfile(stdout);
 	pthread_cond_signal(&can_cond);
 	test1 = 1;
+	// End of critical section 
 	pthread_mutex_unlock(&lock);
 }
 
 void *printCanYouHearMe(void *args){
 	pthread_mutex_lock(&lock);
+	// Start of critical section 
 	while(test1 == 0){
 		pthread_cond_wait(&can_cond, &lock);
 	}
@@ -30,17 +34,20 @@ void *printCanYouHearMe(void *args){
 	funlockfile(stdout);
 	pthread_cond_broadcast(&I_cond);
 	test2 = 1;
+	// End of critical section 
 	pthread_mutex_unlock(&lock);
 }
 
 void *printIWasWondering(void *args){
 	pthread_mutex_lock(&lock);
+	// Start of critical section 
 	while(test2 == 0){
 		pthread_cond_wait(&I_cond, &lock);
 	}
 	flockfile(stdout);
 	fprintf(stdout, "Never going to run around");
 	funlockfile(stdout);
+	// End of critical section 
 	pthread_mutex_unlock(&lock);
 }
 
@@ -51,6 +58,7 @@ int main(int argc, char **argv){
 	test1 = 0;
 	test2 = 0;
 
+	// Initialize values 
 	err = pthread_mutex_init(&lock, NULL);
 	if(err){
 		errno = err;
