@@ -25,26 +25,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #include <string.h>
 #include <semaphore.h>
 
+#include <sys/time.h>
+#include <errno.h>
 
-#include <sys/time.h> //****
-#include <errno.h> //****
 
-#include "print_job.h" //****
-#include "printer_driver.h" //****
-#include "debug.h" //****
-
-#define true 1 //****
-#define false 0 //****
+#include "print_job.h"
+#include "printer_driver.h"
+#include "debug.h"
 
 // -- GLOBAL VARIABLES -- //
 int verbose_flag = 0;
 int exit_flag = 0;
-char* logname = NULL; //****
-FILE* logfile = NULL; //****
-pthread_mutex_t supply_mutex; //****
-int supply = 0; //****
-int first = true; //****
-int timeinms = 100; //****
 
 // -- STATIC VARIABLES -- //
 static struct printer_group * printer_group_head;
@@ -52,6 +43,14 @@ static struct printer_group * printer_group_head;
 // -- FUNCTION PROTOTYPES -- //
 static void parse_command_line(int argc, char * argv[]);
 static void parse_rc_file(FILE* fp);
+
+// Extra Credit portion
+//*****************************************************************************************
+char* logname = NULL;
+FILE* logfile = NULL;
+//*****************************************************************************************
+
+
 
 
 /**
@@ -65,8 +64,7 @@ struct print_job_list
 	sem_t num_jobs;
 	// a lock for the list
 	pthread_mutex_t lock;
-	//**** an event for the list
-	pthread_cond_t cv;
+	// an event for the list
 };
 
 /**
@@ -107,68 +105,56 @@ void *printer_thread(void* param)
 	struct printer * this = param;
 	struct print_job * job;
 	struct print_job * prev;
+
+// INDICATE CONSUMER THREAD START
+//*****************************************************************************************
+	fprintf(logfile, "Consumer thread\n");
+//*****************************************************************************************
+
 	
-	printf("I am a thread\n");
-	while(1 && exit_flag == 0)  // ***
+	while(1 && exit_flag == 0) // Modify original while loop consumer exits
 	{	
+
+// CONSUMER THREAD PRINTS JOBS FROM THE QUEUE
+//*****************************************************************************************
 		int err;
 		
-		// We should wait to be signalled
+		// Log while waiting to be signaled
 		if(verbose_flag)
-			fprintf(logfile, "Consumer waiting for event signal!\n");
-		
-		// Do a time delay to cycle
-		struct timeval tv;
-    		struct timespec ts;
-		
-		gettimeofday(&tv, NULL);
-		ts.tv_sec = time(NULL) + timeinms / 1000;
-		ts.tv_nsec = tv.tv_usec * 1000 + 1000 * 1000 * (timeinms % 1000);
-		ts.tv_sec += ts.tv_nsec / (1000 * 1000 * 1000);
-		ts.tv_nsec %= (1000 * 1000 * 1000);
-		
-		int n = pthread_cond_timedwait(&this->job_queue->cv, &this->job_queue->lock, &ts);
-		
-		if (n == ETIMEDOUT)
-			continue;
+			fprintf(logfile, "Consumer waiting for signal\n");
 
-		fprintf(logfile, "Consumer got signalled!\n");
-		
-		fprintf(logfile, "Consumer popping from queue!\n");
-		// Pop from queue. See: http://www.cs.armstrong.edu/liang/animation/web/Queue.html
+		long numJobs = (long) &this->job_queue->num_jobs;
+
+		// Waits to be woken up by sem_post which provides # of jobs in queue
+		// then starts poping from the print queue
+		sem_wait(&this->job_queue->num_jobs);
 		if(this->job_queue->head != NULL){
 			job = this->job_queue->head;
 			prev = job->next_job;
 			this->job_queue->head = prev;
-			
-			// Print if we can, log if we can't ☺
+			numJobs--;
+			// Send print job to driver
 			err = printer_print(&this->driver, job);
 			if(err != 0)
-				fprintf(logfile, "Consumer error in printing job to driver!\n");
-			else{
-				fprintf(logfile, "Consumer printed job to driver!\n");
-				eprintf("ANNOUNCE: Print job completed: %s\n", job->job_name);
-			}
-			
+				fprintf(logfile, "Consumer printed job to driver\n");
+				eprintf("ATTENTION:: Print job completed: %s\n", job->job_name);
 			fprintf(logfile, "Consumed: %s\n", job->job_name);
-			pthread_mutex_lock(&supply_mutex);
-			supply --;
-			pthread_mutex_unlock(&supply_mutex);
-		}else{
-			fprintf(logfile, "Consumer almost ate a NULL head! Skipping…\n");
-		}
-		
+		}		
 		
 		err = sem_post(&this->job_queue->num_jobs);
 		if(err != 0){
 			eprintf("Semaphore setting failed.\n");
 			exit(err);
 		}
-		fprintf(logfile, "Consumer unlocked semaphore!\n");
-		pthread_mutex_unlock(&this->job_queue->lock);
-		fprintf(logfile, "Consumer unlocked mutex!\n");
+//*****************************************************************************************
 	}
-	fprintf(logfile, "EXIT directive found! Consumer going down!\n"); // ***
+
+// INDICATE CONSUMER THREAD EXIT
+//*****************************************************************************************
+	fprintf(logfile, "Consumer exiting\n");
+//*****************************************************************************************
+
+
 	return NULL;
 }
 
@@ -180,7 +166,12 @@ void * producer_thread(void * param)
 	char * line = NULL;
 	size_t n = 0;
 	long long job_number = 0;
+
+// INDICATE START OF PRODUCER THREAD
+//*****************************************************************************************
 	fprintf(logfile, "Started producer!\n");
+//*****************************************************************************************
+
 	
 	while(getline(&line, &n, stdin) > 0)
 	{
@@ -234,42 +225,44 @@ void * producer_thread(void * param)
 			for(g = printer_group_head; g; g=g->next_group)
 			{
 				if(strcmp(job->group_name, g->name) == 0)
-				{
+				{	
+
+// PRODUCER THREAD ADDS ITEMS TO PRINT QUEUE
+//*****************************************************************************************
 					int err;
 					fprintf(logfile, "Producer group found, locking mutex!\n");
 
 					pthread_mutex_lock(&g->job_queue.lock);
 					fprintf(logfile, "Producer locked mutex!\n");
 
+					// If the print job is empty, add dummy to print queue, otherwise add new print job to end of queue
 					struct print_job* j = g->job_queue.head;
 					if(j == NULL){
 						// Empty queue
 						g->job_queue.head = job;
 						job->next_job = NULL;
 					}else{
-						// Loop through queue
 						while(j->next_job != NULL)
 							j = j->next_job;
 						j->next_job = job;
 						job->next_job = NULL;
 					}
-					
+
+					// increment the lock and wake up printer_thread
 					err = sem_post(&g->job_queue.num_jobs);
 					if(err != 0){
 						eprintf("Failed to post semaphore.\n");
 						exit(err);
 					}
-					fprintf(logfile, "Producer unlocked semaphore!\n");
+					fprintf(logfile, "Producer unlocked sem\n");
 					pthread_mutex_unlock(&g->job_queue.lock);
-					fprintf(logfile, "Producer unlocked mutex!\n");
-					pthread_mutex_lock(&supply_mutex);
-					supply += 1;
-					pthread_mutex_unlock(&supply_mutex);
-					
-					pthread_cond_signal(&g->job_queue.cv);
-					fprintf(logfile, "Broadcast for consumption!\n");
+
+					fprintf(logfile, "Signal ready for consumption\n");
 				}
-			} // ***
+			}
+//*****************************************************************************************
+
+
 			if(job)
 			{
 				fprintf(logfile, "Producer looped over extra printer group name given: %s\n", job->group_name);
@@ -278,17 +271,15 @@ void * producer_thread(void * param)
 		}
 		else if(strncmp(line, "EXIT", 4) == 0)
 		{
-			exit_flag = 1; //***
-			fprintf(logfile, "Found EXIT directive! Producer going down!\n");
-			fprintf(logfile, "Waiting on all consumers to exit…\n");
-			while(1){
-				pthread_mutex_lock(&supply_mutex);
-				if(supply < 1)
-					break;
-				pthread_mutex_unlock(&supply_mutex);
-			}
-			eprintf("ANNOUNCE: EXIT command received, going down…\n"); // ***
+			exit_flag = 1;
 
+// INDICATE PRODUCER THREAD EXITING
+//*****************************************************************************************
+			fprintf(logfile, "Producer exiting\n");
+			fprintf(logfile, "Waiting on all consumers to exit…\n");
+			eprintf("ATTENTION:: Producer exiting\n");
+//*****************************************************************************************
+			
 			return NULL;
 		}
 	}
@@ -303,10 +294,13 @@ int main(int argc, char* argv[])
 
 	// parse the command line arguments
 	parse_command_line(argc, argv);
-	if(logname != NULL){ // ***
+
+
+// LOGFILE
+//*****************************************************************************************
+	if(logname != NULL){
 		logfile = fopen(logname, "w+");
 		if(logfile != NULL){
-			//logtf = true;
 			setbuf(logfile, NULL);
 		}else{
 			eprintf("Error. Failed to open logfile.\n");
@@ -314,7 +308,9 @@ int main(int argc, char* argv[])
 		}
 	}else{
 		logfile = stdout;
-	} // ***
+	}
+//*****************************************************************************************
+
 
 	// open the runtime config file
 	FILE* config = fopen("config.rc", "r");
@@ -323,16 +319,12 @@ int main(int argc, char* argv[])
 	// close the config file
 	fclose(config);
 
-	// *** Initialize supply mutex
-	pthread_mutex_init(&supply_mutex, NULL);
-
-	// *** Create the consumer threads
+	//-- Create the consumer threads
 	// for each printer group
-	for(g = printer_group_head; g; g = g->next_group)
+	for(g = printer_group_head; g; g = g->next_group) 
 	{
 		sem_init(&g->job_queue.num_jobs, 0, 0);
 		pthread_mutex_init(&g->job_queue.lock, NULL);
-		pthread_cond_init(&g->job_queue.cv, NULL);
 		
 		// for each printer in the group
 		for(p = g->printer_queue; p; p = p->next)
@@ -346,11 +338,14 @@ int main(int argc, char* argv[])
 	//-- Create the prducer thread
 	pthread_t producer_tid;
 	pthread_create(&producer_tid, NULL, producer_thread, NULL);
+	
 
-	// *** Initialize events
+// JOIN AND DESTROY THREADS
+//*****************************************************************************************
+	//-- Initialize events
 	int err = pthread_join(producer_tid, NULL);
 	if(err != 0){
-		eprintf("Error. Failed to join producer.\n");
+		eprintf("pthread join error - producer.\n");
 		exit(err);
 	}
 	
@@ -365,7 +360,7 @@ int main(int argc, char* argv[])
 			err = pthread_join(p->tid, NULL);
 			err = 0;
 			if(err != 0){
-				eprintf("Error. Failed to join consumer.\n");
+				eprintf("pthread join error - consumer.\n");
 				exit(err);
 			}
 		}
@@ -376,17 +371,15 @@ int main(int argc, char* argv[])
 	// for each printer group
 	for(g = printer_group_head; g; g = g->next_group)
 	{
-		// crush kill destroy
-		pthread_cond_destroy(&g->job_queue.cv);
+		//destroy
 		pthread_mutex_destroy(&g->job_queue.lock);
 		sem_destroy(&g->job_queue.num_jobs);
 	}
-	
-	pthread_mutex_destroy(&supply_mutex);
-	
-	
+		
 	fflush(logfile);
-	fclose(logfile); // ***
+	fclose(logfile);
+//*****************************************************************************************
+
 
 	return 0;
 }
@@ -403,16 +396,20 @@ int main(int argc, char* argv[])
 static void parse_command_line(int argc, char * argv[])
 {
 	int c;
-	while((c = getopt(argc, argv, "l:t:v?")) != -1) // ***
+	while((c = getopt(argc, argv, "l:t:v?")) != -1)
 	{
 		switch(c)
 		{
-			case 'l': // ***
+
+
+// LOGGING
+//*****************************************************************************************
+			case 'l': 
 				logname = optarg;
 				break;
-			case 't':
-				timeinms = atoi(optarg);
-				break; // ***
+//*****************************************************************************************
+
+
 			case 'v': // turn on verbose mode
 				verbose_flag = 1;
 				break;
@@ -494,4 +491,3 @@ static void parse_rc_file(FILE* fp)
 	dprintf("----------------\n\n");
 
 }
-

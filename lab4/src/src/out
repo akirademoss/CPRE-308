@@ -1,0 +1,79 @@
+Consumer thread
+Consumer thread
+Started producer!
+Producer read NEW!
+Producer read NAME!
+Producer read FILE!
+Producer read DESCRIPTION!
+Producer read PRINTER!
+Producer read PRINT!
+Producer group found, locking mutex!
+Producer locked mutex!
+Producer unlocked sem
+Signal ready for consumption
+Producer looped over extra printer group name given: black_white
+Consumed: output1.pdf
+Producer read NEW!
+Producer read NAME!
+Producer read FILE!
+Producer read DESCRIPTION!
+Producer read PRINTER!
+Producer read PRINT!
+Producer group found, locking mutex!
+Producer locked mutex!
+Producer unlocked sem
+Signal ready for consumption
+Producer looped over extra printer group name given: color
+Consumed: output2.pdf
+Producer read NEW!
+Producer read NAME!
+Producer read FILE!
+Producer read DESCRIPTION!
+Producer read PRINTER!
+Producer read PRINT!
+Producer group found, locking mutex!
+Producer locked mutex!
+Producer unlocked sem
+Signal ready for consumption
+Producer looped over extra printer group name given: black_white
+Consumed: output3.pdf
+Producer read NEW!
+Producer read NAME!
+Producer read FILE!
+Producer read DESCRIPTION!
+Producer read PRINTER!
+Producer read PRINT!
+Producer group found, locking mutex!
+Producer locked mutex!
+Producer unlocked sem
+Signal ready for consumption
+Producer looped over extra printer group name given: color
+Consumed: output4.pdf
+Producer read NEW!
+Producer read NAME!
+Producer read FILE!
+Producer read DESCRIPTION!
+Producer read PRINTER!
+Producer read PRINT!
+Producer group found, locking mutex!
+Producer locked mutex!
+Producer unlocked sem
+Signal ready for consumption
+Producer looped over extra printer group name given: color
+Consumed: output5.pdf
+Producer read NEW!
+Producer read NAME!
+Producer read FILE!
+Producer read DESCRIPTION!
+Producer read PRINTER!
+Producer read PRINT!
+Producer group found, locking mutex!
+Producer locked mutex!
+Producer unlocked sem
+Signal ready for consumption
+Producer looped over extra printer group name given: black_white
+Consumed: output6.pdf
+Producer exiting
+Waiting on all consumers to exit…
+Consumer exiting
+Consumer exiting

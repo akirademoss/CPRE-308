@@ -4,7 +4,7 @@
 #include <semaphore.h>
 #include <errno.h>
 
-#define MAX_PRODUCE 40
+#define MAX_PRODUCE 5
 
 sem_t buffer_items;
 sem_t buffer_slots;
