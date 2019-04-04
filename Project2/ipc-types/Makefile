@@ -2,11 +2,17 @@ CC=gcc
 CFLAGS= -lrt 
 
 
-all: mq_test1 mq_test2 pipe_test shm_test1 shm_test2 sig_test
+all: mq_test1 mq_test2 pipe_test shm_test1 shm_test2 sig_test mkfifo3
+
+
+mkfifo3: mkfifo3.o
+	$(CC) mkfifo3.o -o mkfifo3 $(CFLAGS) 
+mkfifo3.o: mkfifo3.c
+	$(CC) -c mkfifo3.c
+
 
 mq_test1: mq_test1.o
 	$(CC) mq_test1.o -o mq_test1 $(CFLAGS) 
-
 mq_test1.o: mq_test1.c
 	$(CC) -c mq_test1.c
 
@@ -36,4 +42,4 @@ sig_test.o: sig_test.c
 	$(CC) -c sig_test.c  
 
 clean: 
-	rm -f mq_test1 mq_test2 pipe_test shm_test1 mq_test1.o mq_test2.o pipe_test.o shm_test1.o
+	rm -f mq_test1 mq_test2 pipe_test shm_test1 mkfifo3 mq_test1.o mq_test2.o pipe_test.o shm_test1.o mkfifo3.o
