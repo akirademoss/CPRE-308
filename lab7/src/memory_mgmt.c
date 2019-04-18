@@ -10,13 +10,13 @@
 int seed = 0;
 
 // Track which algorithm we're in for use by Opt //----------------------------------------------------------------------------------------------
-typedef enum Algos Algos;
-enum Algos {
-	alg_rand,
-	alg_seq,
-	alg_work
+typedef enum Alg Alg;
+enum Alg {
+	ran,
+	seq,
+	lr
 };
-Algos algo;  //----------------------------------------------------------------------------------------------------------------------------------
+Alg algo;  //----------------------------------------------------------------------------------------------------------------------------------
 
 /* Structure to hold a page information */
 typedef struct {
@@ -210,7 +210,7 @@ int main ()
   int i;
   for(i = 0; i < NUM_RUNS; i++) {
   	/* Memory access analysis with random access */
-    algo = alg_rand;  //----------------------------------------------------------------------------------------------------------------------------------
+    	algo = ran;  //----------------------------------------------------------------------------------------------------------------------------------
   	initialize_page_frames(PageFrames,NUM_FRAMES);
   	build_random_access_seq(PageAccesses,NUM_ACCESSES);
   	PageFaultTotals.page_faults_FIFO_rand += handle_page_accesses(PageFrames,NUM_FRAMES,PageAccesses,NUM_ACCESSES,PRAlgo_FIFO);  //--------------------------------------
@@ -223,7 +223,7 @@ int main ()
   
   
   	/* Memory access analysis with sequential access */
-    algo = alg_seq;  //----------------------------------------------------------------------------------------------------------------------------------
+    	algo = seq;  //----------------------------------------------------------------------------------------------------------------------------------
   	initialize_page_frames(PageFrames,NUM_FRAMES);
   	build_sequential_access_seq(PageAccesses,NUM_ACCESSES); 
   	PageFaultTotals.page_faults_FIFO_seq += handle_page_accesses(PageFrames,NUM_FRAMES,PageAccesses,NUM_ACCESSES,PRAlgo_FIFO);
@@ -236,7 +236,7 @@ int main ()
   
     
   	/* Memory access analysis with LR workload access */
-    algo = alg_work;  //----------------------------------------------------------------------------------------------------------------------------------
+    	algo = lr;  //----------------------------------------------------------------------------------------------------------------------------------
   	initialize_page_frames(PageFrames,NUM_FRAMES);
   	build_lr_workload_access_seq(PageAccesses,NUM_ACCESSES);
   	PageFaultTotals.page_faults_FIFO_lr += handle_page_accesses(PageFrames,NUM_FRAMES,PageAccesses,NUM_ACCESSES,PRAlgo_FIFO);
@@ -298,7 +298,8 @@ PRAlgo_LRU(const PageFrame * PageFrames, int num_frames, const int * PageAccesse
 	int index_with_least_access_time = 0;
 	int i;
 
-	// Since time increases in value, we search for the smallest access time value (indicating the oldest element)
+	// We compare current frame time_of_access with the next frame's time_of_access and set both least_time_of_access and the index
+	// where this occurrs so this may be replaced
 	for(i = 1; i < num_frames; i++)
 		if(PageFrames[i].time_of_access < least_time_of_access){
 			least_time_of_access = PageFrames[i].time_of_access;
@@ -308,15 +309,15 @@ PRAlgo_LRU(const PageFrame * PageFrames, int num_frames, const int * PageAccesse
 	return index_with_least_access_time; 
 }
 
-/* Returns the next page that is going to be replaced ;; uses Algos algo to know what can come next */
+/* Returns the next page that is going to be replaced using alg to dictate what comes next*/
 int
 PRAlgo_OPT(const PageFrame * PageFrames, int num_frames, const int * PageAccesses, int num_accesses, int current_access)
 {
-	int index_optimal = 0;
+	int opt_index = 0;
 	int i;
 	
-	// Sequential dictates the last page id is accessed last
-	if(algo == alg_seq){
+	// Sequential access means replacing the largest pagid will replace the page whose next use occurs furthest in the future
+	if(algo == seq){
 		int maxid = PageFrames[0].page_id;
 		for(i = 1; i < num_frames; i++){
 			if(PageFrames[i].page_id > maxid)
@@ -326,15 +327,15 @@ PRAlgo_OPT(const PageFrame * PageFrames, int num_frames, const int * PageAccesse
 	}
 
 	// Random picks a number between 1 and 128 at random, so we will pick a number at random as well
-	if(algo == alg_rand){
+	if(algo == ran){
 		int page_id = rand() % num_frames;
 		for(i = 0; i < num_frames; i++)
 			if(i == page_id)
 				return i;
 	}
 	
-	// Workload (LR) has a 90% chance that the next page is among the 5 pages that were most recently accessed ;; we pick the oldest page (Same as LRU)
-	if(algo == alg_work){
+	// Workload (LR) has a 90% chance that the next page is among the 5 pages that were most recently accessed so we pick the oldest page just like LRU
+	if(algo == lr){
 		int least_time_of_access = PageFrames[0].time_of_access;
 		int index_with_least_access_time = 0;
 
@@ -346,18 +347,18 @@ PRAlgo_OPT(const PageFrame * PageFrames, int num_frames, const int * PageAccesse
 		return index_with_least_access_time;
 	}
   
-	return index_optimal;
+	return opt_index;
 }
 
-/* Returns the next page that is going to be replaced ;; goal is beat LRU on LR */
+/* Returns the next page that is going to be replaced*/
 int
 PRAlgo_CUST(const PageFrame * PageFrames, int num_frames, const int * PageAccesses, int num_accesses, int current_access)
 {
-	int index_optimal = 0;
+	int opt_index = 0;
 	int i;
 	
-	// Sequential dictates the last page id is accessed last
-	if(algo == alg_seq){
+	// Sequential access means replacing the largest pagid will replace the page whose next use occurs furthest in the future
+	if(algo == seq){
 		int maxid = PageFrames[0].page_id;
 		for(i = 1; i < num_frames; i++){
 			if(PageFrames[i].page_id > maxid)
@@ -367,7 +368,7 @@ PRAlgo_CUST(const PageFrame * PageFrames, int num_frames, const int * PageAccess
 	}
 
 	// Random picks a number between 1 and 128 at random, so we will pick a number at random as well
-	if(algo == alg_rand){
+	if(algo == ran){
 		int page_id = rand() % num_frames;
 		for(i = 0; i < num_frames; i++)
 			if(i == page_id)
@@ -375,8 +376,7 @@ PRAlgo_CUST(const PageFrame * PageFrames, int num_frames, const int * PageAccess
 	}
 	
 	// Workload (LR) has a 90% chance that the next page is among the 5 pages that were most recently accessed
-	// We select the oldest page, this is the same for what I did for LRU because I couldn't write anything more accurate for LR
-	if(algo == alg_work){
+	if(algo == lr){
 		int minid = 0;
 		int lastmin = current_access - PageFrames[0].time_of_access;
 
@@ -389,16 +389,6 @@ PRAlgo_CUST(const PageFrame * PageFrames, int num_frames, const int * PageAccess
 		return minid;
 	}
   
-	return index_optimal;
-}
-
-int
-contains(int* arr, int n)
-{
-	int i;
-	for(i = 0; i < 5; i++)
-		if(arr[i] == n)
-			return 1;
-	return 0;
+	return opt_index;
 }
 //----------------------------------------------------------------------------------------------------------------------------------
