@@ -7,12 +7,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <fcntl.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
 
 #define SIZE 32  /* size of the read buffer */
-#define debug 0
 //define PRINT_HEX // un-comment this to print the values in hex for debugging
 
 struct BootSector
@@ -81,14 +77,8 @@ int main(int argc, char * argv[])
 // Converts two characters to an unsigned short with two, one
 unsigned short endianSwap(unsigned char one, unsigned char two)
 {
-    // This is stub code! -- REDACTED (see combineBytes)
+    // This is stub code!
 	return 0x0000;
-}
-
-// combines 2 bytes into an integer value
-int combineBytes(unsigned char buffer[], int i)
-{
-	return ((buffer[i+1] << 8) & 0xFF00) | (buffer[i] & 0xFF);
 }
 
 
@@ -97,39 +87,17 @@ void decodeBootSector(struct BootSector * pBootS, unsigned char buffer[])
 {
 	int i = 3;  // Skip the first 3 bytes
     
-	// Pull the name and put it in the struct (remember to null-terminate) -- 3-10
-	char* osName = calloc(9, sizeof(char));
-	for(; i < 11; i++)
-		osName[i-3] = buffer[i];
-	osName[7] = '\0';
-	strcpy(pBootS->sName, osName);
-	free(osName);
+	// Pull the name and put it in the struct (remember to null-terminate)
     
-	// Read bytes/sector and convert to big endian -- 11-12
-	int bytesec = combineBytes(buffer, 11);
-	pBootS->iBytesSector = bytesec;
+	// Read bytes/sector and convert to big endian
     
-	// Read sectors/cluster, Reserved sectors and Number of Fats -- 13, 14-15, 16
-	int secclust = buffer[13]; 
-	pBootS->iSectorsCluster = secclust;
-	pBootS->iReservedSectors = combineBytes(buffer, 14);
-	pBootS->iNumberFATs = buffer[16];
+	// Read sectors/cluster, Reserved sectors and Number of Fats
     
-	// Read root entries, logicical sectors and medium descriptor -- 17-18, 19-20, 21
-	pBootS->iRootEntries = combineBytes(buffer, 17);
-	pBootS->iLogicalSectors = combineBytes(buffer, 19);
-	
-	// Use the raw hex ☺
-	pBootS->xMediumDescriptor = buffer[21];
+	// Read root entries, logicical sectors and medium descriptor
     
-	// Read and covert sectors/fat, sectors/track, and number of heads -- 22-23, 24-25, 26-27
-	pBootS->iSectorsFAT = combineBytes(buffer, 22);
-	pBootS->iSectorsTrack = combineBytes(buffer, 24);
-	pBootS->iHeads = combineBytes(buffer, 26);
+	// Read and covert sectors/fat, sectors/track, and number of heads
     
-	// Read hidden sectors -- 28-31 (4 byte value)
-	int32_t hidsec = ((buffer[31]) << 24) | ((buffer[30]) << 16) | ((buffer[29]) << 8) | (buffer[28]);
-	pBootS->iHiddenSectors = hidsec;
+	// Read hidden sectors
     
 	return;
 }
